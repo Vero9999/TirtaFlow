@@ -165,7 +165,7 @@ nongsa_df = pd.concat([nongsa_hist, nongsa_forecast_full], ignore_index=True)
 
 def trend_chart(df, y_domain, forecast_color):
     return alt.Chart(df).mark_line(strokeWidth=2.5).encode(
-        x=alt.X("Date:T", title=None),
+        x=alt.X("Date:T", title=None, axis=alt.Axis(format="%Y-%m-%d", tickCount=6)),
         y=alt.Y("Level (%):Q", title="Reservoir Level (%)", scale=alt.Scale(domain=y_domain)),
         color=alt.Color(
             "Type:N", title=None,
