@@ -21,6 +21,11 @@ st.set_page_config(page_title="TirtaFlow", page_icon="💧", layout="wide")
 st.markdown(
     """
     <style>
+    html, body {
+        height: 100% !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+    }
     header[data-testid="stHeader"] { display: none; }
     .header {
         position: fixed; top: 0; left: 0; right: 0; width: 100%;
@@ -30,13 +35,24 @@ st.markdown(
         font-family: Arial, sans-serif;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
     }
+    [data-testid="stAppViewContainer"] {
+        height: 100vh !important;
+        overflow: hidden !important;
+    }
     section[data-testid="stSidebar"] {
         padding-top: 88px !important;
         background-color: #181d33 !important;
         clip-path: inset(88px 0 0 0);
     }
     section[data-testid="stSidebar"] > div { background-color: #181d33 !important; }
-    [data-testid="stAppViewContainer"] .block-container { padding-top: 96px !important; }
+    /* Main content is its own scroll container confined to the area below
+       the fixed header, so its scrollbar never runs alongside the header. */
+    [data-testid="stAppViewContainer"] > .main,
+    [data-testid="stMain"] {
+        margin-top: 96px !important;
+        height: calc(100vh - 96px) !important;
+        overflow-y: auto !important;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -266,10 +282,6 @@ section[data-testid="stSidebar"] {
 }
 section[data-testid="stSidebar"] > div {
     background-color: #181d33 !important;
-}
-
-[data-testid="stAppViewContainer"] .block-container {
-    padding-top: 96px !important;
 }
 
 [data-testid="stAppViewContainer"] > .main,
