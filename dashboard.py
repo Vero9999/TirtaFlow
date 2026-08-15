@@ -9,7 +9,38 @@ import streamlit.components.v1 as components
 
 BASE_DIR = Path(__file__).parent
 
-st.set_page_config(page_title="Water & Energy Guardian", page_icon="💧", layout="wide")
+st.set_page_config(page_title="TirtaFlow", page_icon="💧", layout="wide")
+
+# Critical layout CSS — rendered synchronously as the very first element on
+# every single rerun, so the fixed header and content padding are already in
+# place before the header/cards below ever get a chance to paint. This is
+# what stops cards from visually appearing above the header when navigating
+# (the larger cosmetic CSS further down still uses the async persistent-inject
+# trick, since it isn't layout-critical and re-running it every time would
+# reintroduce the old flash-of-unstyled-content problem).
+st.markdown(
+    """
+    <style>
+    header[data-testid="stHeader"] { display: none; }
+    .header {
+        position: fixed; top: 0; left: 0; right: 0; width: 100%;
+        z-index: 999999; box-sizing: border-box;
+        background-color: #14182b; padding: 18px 32px; color: #ffffff;
+        display: flex; justify-content: space-between; align-items: center;
+        font-family: Arial, sans-serif;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+    }
+    section[data-testid="stSidebar"] {
+        padding-top: 88px !important;
+        background-color: #181d33 !important;
+        clip-path: inset(88px 0 0 0);
+    }
+    section[data-testid="stSidebar"] > div { background-color: #181d33 !important; }
+    [data-testid="stAppViewContainer"] .block-container { padding-top: 96px !important; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 
 def inject_persistent_css(css_text, style_id):
@@ -894,7 +925,7 @@ st.markdown(
             <div class="header-logo-box">
                 <img src="{_logo_src}" class="header-logo" alt="logo">
             </div>
-            <div class="header-left">Water & Energy Guardian · Data Center Resource Monitoring</div>
+            <div class="header-left">TirtaFlow</div>
         </div>
         <div class="header-right"></div>
     </div>
@@ -1289,6 +1320,6 @@ elif menu == "Summary":
 # Footer
 # ---------------------------------------------------------------------------
 st.markdown(
-    '<div class="app-footer">TirtaFlow — Batam Singapore Hackathon 2026</div>',
+    '<div class="app-footer">TirtaFlow — 2026</div>',
     unsafe_allow_html=True,
 )
