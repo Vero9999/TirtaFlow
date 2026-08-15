@@ -1143,7 +1143,7 @@ elif menu == "Summary":
             nongsa_df.assign(Reservoir="Nongsa"),
         ], ignore_index=True)
         summary_chart = alt.Chart(combined_df).mark_line(strokeWidth=2.5).encode(
-            x=alt.X("Date:T", title=None),
+            x=alt.X("Date:T", title=None, axis=alt.Axis(format="%Y-%m-%d", tickCount=6)),
             y=alt.Y("Level (%):Q", title="Reservoir Level (%)"),
             color=alt.Color(
                 "Reservoir:N", title=None,
