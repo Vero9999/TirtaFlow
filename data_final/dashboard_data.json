@@ -1,0 +1,36 @@
+{
+  "last_updated": "2026-08-14",
+  "status": {
+    "kota_pct": 91.98,
+    "kota_status": "Aman",
+    "nongsa_pct": 67.4,
+    "nongsa_trend_8mo_poin": -33.5
+  },
+  "early_warning": {
+    "target_pct": 35,
+    "target_label": "Siaga",
+    "eta_days": 486,
+    "eta_label": "~16 bulan",
+    "method": "linear extrapolation dari slope forecast 90 hari"
+  },
+  "dc_baseline": {
+    "servers": 8000,
+    "power_per_server_kW": 0.3,
+    "wue_L_per_kWh": 1.8,
+    "recycle_rate_pct": 75,
+    "energi_recycle_kWh_per_m3": 2.5,
+    "nongsa_volume_m3": 724000
+  },
+  "dc_current": {
+    "gross_m3_per_day": 103.68,
+    "net_from_reservoir_m3_per_day": 25.92,
+    "server_energy_kWh_per_day": 57600.0,
+    "recycle_energy_kWh_per_day": 194.4
+  },
+  "data_notes": {
+    "real_period": "2025-12-15 to 2026-08-14",
+    "simulated_period": "2024-01-01 to 2025-12-14",
+    "real_source": "BP Batam - Informasi TMA harian",
+    "simulated_method": "Seasonal bootstrap with mean-reversion"
+  }
+}
