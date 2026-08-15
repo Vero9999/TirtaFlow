@@ -13,11 +13,11 @@ st.set_page_config(page_title="Water & Energy Guardian", page_icon="💧", layou
 
 
 def inject_persistent_css(css_text, style_id):
-    """Pasang <style> ke document induk lewat JS, sekali saja per sesi
-    browser (dicek via id elemen). Ini menghindari flash-of-unstyled-content
-    yang terjadi kalau CSS besar dibongkar-pasang ulang lewat st.markdown()
-    di setiap rerun Streamlit — termasuk penyebab sidebar sempat "naik"
-    menutupi header sesaat sebelum CSS layout-nya terpasang kembali."""
+    """Attach <style> to the parent document via JS, once per browser
+    session (checked via element id). This avoids the flash-of-unstyled-content
+    that happens when large CSS is torn down and rebuilt via st.markdown()
+    on every Streamlit rerun — including the cause of the sidebar briefly
+    "jumping up" over the header right before its layout CSS re-applies."""
     escaped = css_text.replace("\\", "\\\\").replace("`", "\\`").replace("</script", "<\\/script")
     components.html(
         f"""
@@ -69,15 +69,15 @@ try:
     dashboard_data = load_dashboard_json()
     reservoir_df = load_reservoir_csv()
 except (FileNotFoundError, json.JSONDecodeError) as e:
-    st.error(f"Gagal memuat data dashboard: {e}. Pastikan file logo.png, barelang.png, "
-             f"dashboard_data.json, dan reservoir_data.csv ada di folder yang sama dengan dashboard.py.")
+    st.error(f"Failed to load dashboard data: {e}. Make sure logo.png, barelang.png, "
+             f"dashboard_data.json, and reservoir_data.csv are in the same folder as dashboard.py.")
     st.stop()
 
 _logo_src = f"data:image/png;base64,{_logo_base64}"
 _watermark_src = f"data:image/png;base64,{_watermark_base64}"
 
 # ---------------------------------------------------------------------------
-# Turunan data reservoir (dipakai bareng oleh halaman Dashboard & Summary)
+# Derived reservoir data (shared by the Dashboard & Summary pages)
 # ---------------------------------------------------------------------------
 STATUS = dashboard_data["status"]
 EARLY_WARNING = dashboard_data["early_warning"]
@@ -97,13 +97,13 @@ TODAY = pd.Timestamp(dashboard_data["last_updated"])
 
 def split_hist_forecast(df, value_col, lower_col, upper_col):
     hist = df[~df["is_forecast"]][["date", value_col]].rename(
-        columns={"date": "Tanggal", value_col: "Level (%)"}
+        columns={"date": "Date", value_col: "Level (%)"}
     )
-    hist["Tipe"] = "Historis"
+    hist["Type"] = "Historical"
     forecast = df[df["is_forecast"]][["date", value_col, lower_col, upper_col]].rename(
-        columns={"date": "Tanggal", value_col: "Level (%)", lower_col: "Lower", upper_col: "Upper"}
+        columns={"date": "Date", value_col: "Level (%)", lower_col: "Lower", upper_col: "Upper"}
     )
-    forecast["Tipe"] = "Forecast"
+    forecast["Type"] = "Forecast"
     return hist, forecast
 
 
@@ -112,19 +112,19 @@ nongsa_hist, nongsa_forecast = split_hist_forecast(reservoir_df, "nongsa_pct", "
 
 kota_df = pd.concat([kota_hist, kota_forecast], ignore_index=True)
 
-# Sambungan ekstrapolasi linear Nongsa dari ujung forecast 90 hari (CSV) sampai
-# titik target (Siaga) pada eta_days — sesuai method di dashboard_data.json.
+# Linear extrapolation of the Nongsa 90-day forecast (CSV) out to the
+# target point (Siaga) at eta_days — matches the method in dashboard_data.json.
 _extra_days = SIAGA_ETA_DAYS - len(nongsa_forecast)
 if _extra_days > 0:
     _ext_start_val = nongsa_forecast["Level (%)"].iloc[-1]
-    _ext_dates = pd.date_range(start=nongsa_forecast["Tanggal"].max() + pd.Timedelta(days=1), periods=_extra_days)
+    _ext_dates = pd.date_range(start=nongsa_forecast["Date"].max() + pd.Timedelta(days=1), periods=_extra_days)
     _ext_vals = [
         _ext_start_val + (SIAGA_THRESHOLD - _ext_start_val) * ((i + 1) / _extra_days)
         for i in range(_extra_days)
     ]
     nongsa_forecast_full = pd.concat([
         nongsa_forecast,
-        pd.DataFrame({"Tanggal": _ext_dates, "Level (%)": _ext_vals, "Tipe": "Forecast"}),
+        pd.DataFrame({"Date": _ext_dates, "Level (%)": _ext_vals, "Type": "Forecast"}),
     ], ignore_index=True)
 else:
     nongsa_forecast_full = nongsa_forecast
@@ -134,16 +134,16 @@ nongsa_df = pd.concat([nongsa_hist, nongsa_forecast_full], ignore_index=True)
 
 def trend_chart(df, y_domain, forecast_color):
     return alt.Chart(df).mark_line(strokeWidth=2.5).encode(
-        x=alt.X("Tanggal:T", title=None),
-        y=alt.Y("Level (%):Q", title="Level Reservoir (%)", scale=alt.Scale(domain=y_domain)),
+        x=alt.X("Date:T", title=None),
+        y=alt.Y("Level (%):Q", title="Reservoir Level (%)", scale=alt.Scale(domain=y_domain)),
         color=alt.Color(
-            "Tipe:N", title=None,
-            scale=alt.Scale(domain=["Historis", "Forecast"], range=["#1ca8d8", forecast_color]),
+            "Type:N", title=None,
+            scale=alt.Scale(domain=["Historical", "Forecast"], range=["#1ca8d8", forecast_color]),
             legend=alt.Legend(orient="top"),
         ),
         strokeDash=alt.StrokeDash(
-            "Tipe:N",
-            scale=alt.Scale(domain=["Historis", "Forecast"], range=[[1, 0], [6, 4]]),
+            "Type:N",
+            scale=alt.Scale(domain=["Historical", "Forecast"], range=[[1, 0], [6, 4]]),
             legend=None,
         ),
     )
@@ -151,11 +151,11 @@ def trend_chart(df, y_domain, forecast_color):
 
 def confidence_band(forecast_df, color):
     return alt.Chart(forecast_df).mark_area(opacity=0.15, color=color).encode(
-        x=alt.X("Tanggal:T"), y=alt.Y("Lower:Q"), y2=alt.Y2("Upper:Q"),
+        x=alt.X("Date:T"), y=alt.Y("Lower:Q"), y2=alt.Y2("Upper:Q"),
     )
 
 
-# --- Alerts di-generate otomatis dari ambang batas kota_pct/nongsa_pct ---
+# --- Alerts are auto-generated from the kota_pct/nongsa_pct thresholds ---
 ALERT_TIERS = [(85, "warning", "WATCH"), (70, "warning", "WARNING"), (50, "critical", "SIAGA")]
 
 
@@ -167,26 +167,26 @@ def generate_threshold_alerts(df, column, reservoir_name):
         if crossed_idx > reached_tier:
             threshold, level, label = ALERT_TIERS[crossed_idx]
             alerts.append({
-                "tanggal": row["date"],
+                "date": row["date"],
                 "level": level,
-                "pesan": f"{reservoir_name} turun di bawah {threshold}% (level {label}) — saat ini {val:.1f}%.",
+                "message": f"{reservoir_name} dropped below {threshold}% ({label} level) — currently {val:.1f}%.",
             })
             reached_tier = crossed_idx
     return alerts
 
 
 _alerts_list = (
-    generate_threshold_alerts(reservoir_df, "kota_pct", "Reservoir Kota")
+    generate_threshold_alerts(reservoir_df, "kota_pct", "City Reservoir")
     + generate_threshold_alerts(reservoir_df, "nongsa_pct", "Sei Nongsa")
     + [{
-        "tanggal": TODAY + pd.Timedelta(days=SIAGA_ETA_DAYS),
+        "date": TODAY + pd.Timedelta(days=SIAGA_ETA_DAYS),
         "level": "critical",
-        "pesan": f"Proyeksi: Sei Nongsa diperkirakan mencapai zona {SIAGA_LABEL} ({SIAGA_THRESHOLD}%) "
-                 f"dalam {SIAGA_ETA_LABEL} ({EARLY_WARNING['method']}).",
+        "message": f"Projection: Sei Nongsa is expected to reach the {SIAGA_LABEL} zone ({SIAGA_THRESHOLD}%) "
+                   f"within {SIAGA_ETA_LABEL} ({EARLY_WARNING['method']}).",
     }]
 )
 alerts_df = pd.DataFrame(_alerts_list)
-alerts_df["tanggal"] = pd.to_datetime(alerts_df["tanggal"])
+alerts_df["date"] = pd.to_datetime(alerts_df["date"])
 
 if "sidebar_collapsed" not in st.session_state:
     st.session_state.sidebar_collapsed = False
@@ -198,7 +198,7 @@ if "alerts_dismissed" not in st.session_state:
     st.session_state.alerts_dismissed = {}
 
 # ---------------------------------------------------------------------------
-# Global CSS (header, sidebar, cards) — dipasang sekali, dipakai di semua halaman
+# Global CSS (header, sidebar, cards) — installed once, used on every page
 # ---------------------------------------------------------------------------
 global_css = """
 <style>
@@ -228,9 +228,9 @@ section[data-testid="stSidebar"] {
     padding-top: 88px !important;
     background-color: #181d33 !important;
     transition: width 0.2s ease-in-out;
-    /* Potong fisik 88px teratas dari kotak sidebar itu sendiri, supaya
-       area yang ditempati header tidak PERNAH tergambar apa pun dari
-       sidebar — terlepas dari isu timing/urutan z-index saat rerun. */
+    /* Physically clip the top 88px of the sidebar box itself, so the
+       area occupied by the header NEVER shows anything from the
+       sidebar — regardless of timing/z-index ordering issues on rerun. */
     clip-path: inset(88px 0 0 0);
 }
 section[data-testid="stSidebar"] > div {
@@ -316,7 +316,7 @@ section[data-testid="stSidebar"] > div {
     background: rgba(255, 255, 255, 0.12) !important;
 }
 
-/* Tombol navigasi sidebar */
+/* Sidebar navigation buttons */
 section[data-testid="stSidebar"] div.stButton > button {
     font-size: 18px !important;
     line-height: 1.2 !important;
@@ -358,7 +358,7 @@ section[data-testid="stSidebar"] div.stButton > button[kind="secondary"]:hover s
     color: #ffffff !important;
 }
 
-/* Checkbox custom (dipakai di halaman Alerts) */
+/* Custom checkbox (used on the Alerts page) */
 input[type="checkbox"] {
     width: 36px !important;
     height: 36px !important;
@@ -392,7 +392,7 @@ div:has(> input[type="checkbox"]):hover {
     background: linear-gradient(135deg, #e0f7ff 0%, #cce7ff 100%) !important;
 }
 
-/* Kartu gauge & status (halaman Dashboard) — ukuran & padding disamakan agar grid rapi */
+/* Gauge & status cards (Dashboard page) — size & padding matched for a tidy grid */
 .water-gauge-card, .power-gauge-card, .status-card {
     height: 220px !important;
     min-height: 0 !important;
@@ -403,8 +403,8 @@ div:has(> input[type="checkbox"]):hover {
     overflow: hidden;
 }
 .water-gauge-card, .power-gauge-card {
-    /* Block layout biasa (bukan flex) — supaya judul selalu mulai persis di
-       padding-top, sama seperti .status-card, tanpa distorsi dari flexbox. */
+    /* Plain block layout (not flex) — so the title always starts exactly at
+       padding-top, same as .status-card, with no distortion from flexbox. */
     text-align: center;
 }
 .water-gauge-card {
@@ -465,7 +465,7 @@ div:has(> input[type="checkbox"]):hover {
 .power-gauge-value .value-scale { font-size: 13px; color: #8a6b4d; margin-top: 4px; }
 
 .status-card {
-    /* Block layout biasa (bukan flex) — konsisten dengan gauge card di atas. */
+    /* Plain block layout (not flex) — consistent with the gauge card above. */
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
     border: 1px solid #e5e7eb;
 }
@@ -528,9 +528,9 @@ div:has(> input[type="checkbox"]):hover {
 .status-pill.health-pill { background: #dcfce7; color: #166534; }
 .status-pill.watch-pill { background: #fef3c7; color: #92400e; }
 
-/* Kartu grafik — dipasang lewat st.container(key=...), bukan div markdown
-   biasa, supaya chart Streamlit sungguhan berada di DALAM kartu (bukan
-   sekadar bersebelahan dengannya). */
+/* Chart cards — mounted via st.container(key=...) rather than a plain
+   markdown div, so the real Streamlit chart sits INSIDE the card (not
+   merely next to it). */
 .st-key-water_chart_card,
 .st-key-summary_chart_card,
 .st-key-kota_chart_card,
@@ -575,7 +575,7 @@ div:has(> input[type="checkbox"]):hover {
 .metric-card.pue-card { background: linear-gradient(180deg, #f0f9ff 0%, #edf7ff 100%); border-color: #cfeaf9; }
 .metric-card.wue-card { background: linear-gradient(180deg, #f4fff9 0%, #edfdf4 100%); border-color: #d6f4e1; }
 
-/* Kartu alert (halaman Alerts) */
+/* Alert cards (Alerts page) */
 .alert-card {
     background: linear-gradient(180deg, #fffaf3 0%, #fff5e6 100%);
     border: 1px solid #f7c977;
@@ -620,7 +620,7 @@ div:has(> input[type="checkbox"]):hover {
 .alert-tag.warning { background: #fef3c7; color: #92400e; }
 .alert-tag.critical { background: #fee2e2; color: #b91c1c; }
 
-/* Kartu ringkasan (halaman Summary) */
+/* Summary cards (Summary page) */
 .summary-header {
     margin: 0 0 16px;
     color: #0f172a;
@@ -660,7 +660,7 @@ div:has(> input[type="checkbox"]):hover {
     .summary-grid { grid-template-columns: 1fr; }
 }
 
-/* Panel Simulasi Data Center (halaman Summary) */
+/* Data Center Simulation panel (Summary page) */
 .st-key-dc_sim_card {
     background: linear-gradient(180deg, #ffffff 0%, #f8fbfe 100%);
     border: 1px solid #dfeaf2;
@@ -759,7 +759,7 @@ div:has(> input[type="checkbox"]):hover {
     margin-top: 4px;
 }
 
-/* Badge panah + efek kedip saat nilai simulasi berubah */
+/* Arrow badge + flash effect when a simulation value changes */
 @keyframes dcValuePulse {
     0% { background-color: rgba(0, 212, 255, 0.28); }
     100% { background-color: rgba(0, 212, 255, 0); }
@@ -843,7 +843,7 @@ div:has(> input[type="checkbox"]):hover {
     font-family: Arial, sans-serif;
 }
 
-/* Responsif untuk layar sempit */
+/* Responsive for narrow screens */
 @media (max-width: 640px) {
     .water-gauge-card, .power-gauge-card, .status-card {
         height: auto;
@@ -907,14 +907,15 @@ if st.button("☰", key="sidebar_toggle_btn"):
     st.rerun()
 
 # ---------------------------------------------------------------------------
-# Sidebar navigasi
+# Sidebar navigation
 # ---------------------------------------------------------------------------
-# Catatan: TIDAK pakai st.rerun() di sini. Streamlit sudah otomatis rerun satu
-# kali setiap tombol diklik — memanggil st.rerun() lagi di dalamnya memaksa
-# rerun KEDUA yang membatalkan render pertama di tengah jalan (termasuk header
-# yang sudah sempat digambar), itulah yang terlihat sebagai "kedip" tadi.
-# Highlight tombol aktif juga sengaja dipindah ke CSS (bukan parameter type=
-# saat pembuatan tombol), supaya tetap akurat walau tanpa rerun kedua.
+# Note: st.rerun() is NOT used here on purpose. Streamlit already reruns
+# automatically once per button click — calling st.rerun() again inside would
+# force a SECOND rerun that cancels the first render mid-flight (including a
+# header that had already been drawn), which is what showed up as the earlier
+# "flicker". Highlighting the active button is also deliberately handled via
+# CSS (instead of the type= parameter at button creation), so it stays
+# accurate even without a second rerun.
 _clicked_page = None
 for page in ["Dashboard", "Alerts", "Summary"]:
     if st.sidebar.button(page, key=f"nav_{page}", use_container_width=True):
@@ -947,7 +948,7 @@ st.markdown(
 )
 
 # ---------------------------------------------------------------------------
-# Halaman: Dashboard
+# Page: Dashboard
 # ---------------------------------------------------------------------------
 if menu == "Dashboard":
     col1, col2, col3 = st.columns(3)
@@ -955,9 +956,9 @@ if menu == "Dashboard":
         st.markdown(
             f"""
             <div class="status-card health-card">
-                <div class="status-label">Kota (weighted, 7 waduk)</div>
+                <div class="status-label">City (weighted, 7 reservoirs)</div>
                 <div class="status-value">{KOTA_LEVEL:.0f}%</div>
-                <div class="status-meta">Status reservoir gabungan kota</div>
+                <div class="status-meta">Combined city reservoir status</div>
                 <div class="status-pill health-pill">{KOTA_STATUS_LABEL}</div>
             </div>
             """,
@@ -969,8 +970,8 @@ if menu == "Dashboard":
             <div class="status-card watch-card">
                 <div class="status-label">Sei Nongsa</div>
                 <div class="status-value">{NONGSA_LEVEL:.0f}%</div>
-                <div class="status-meta">↓ {NONGSA_TREND_POIN:.1f} poin dalam 8 bulan terakhir</div>
-                <div class="status-pill watch-pill">Menurun</div>
+                <div class="status-meta">↓ {NONGSA_TREND_POIN:.1f} points over the last 8 months</div>
+                <div class="status-pill watch-pill">Declining</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -980,28 +981,28 @@ if menu == "Dashboard":
             f"""
             <div class="status-card warning-card">
                 <div class="status-label">⚠ Early Warning</div>
-                <div class="status-meta">Nongsa diproyeksi capai zona {SIAGA_LABEL} ({SIAGA_THRESHOLD}%) dalam
-                {SIAGA_ETA_LABEL}. Ekstrapolasi tren linear forecast — cukup waktu untuk
-                mitigasi jika dipantau sekarang.</div>
+                <div class="status-meta">Nongsa is projected to reach the {SIAGA_LABEL} zone ({SIAGA_THRESHOLD}%) within
+                {SIAGA_ETA_LABEL}. Linear trend extrapolation of the forecast — there is enough time for
+                mitigation if monitored now.</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-    st.markdown('<h3 style="margin: 1.5rem 0 0.75rem; color: #0f172a; font-size: 1.2rem;">Reservoir Kota — Historis & Forecast 90 Hari</h3>', unsafe_allow_html=True)
+    st.markdown('<h3 style="margin: 1.5rem 0 0.75rem; color: #0f172a; font-size: 1.2rem;">City Reservoir — Historical & 90-Day Forecast</h3>', unsafe_allow_html=True)
     with st.container(key="kota_chart_card"):
         kota_chart = (
             confidence_band(kota_forecast, "#f59e0b") + trend_chart(kota_df, [80, 105], "#f59e0b")
         ).properties(height=340)
         st.altair_chart(kota_chart, use_container_width=True)
 
-    st.markdown('<h3 style="margin: 1.5rem 0 0.75rem; color: #0f172a; font-size: 1.2rem;">Sei Nongsa — Tren Menurun & Proyeksi</h3>', unsafe_allow_html=True)
+    st.markdown('<h3 style="margin: 1.5rem 0 0.75rem; color: #0f172a; font-size: 1.2rem;">Sei Nongsa — Declining Trend & Projection</h3>', unsafe_allow_html=True)
     with st.container(key="nongsa_chart_card"):
         siaga_rule = alt.Chart(pd.DataFrame({"y": [SIAGA_THRESHOLD]})).mark_rule(
             color="#ef4444", strokeDash=[5, 4], size=2
         ).encode(y="y:Q")
         siaga_label = alt.Chart(
-            pd.DataFrame({"y": [SIAGA_THRESHOLD], "label": [f"Ambang {SIAGA_LABEL} ({SIAGA_THRESHOLD}%)"]})
+            pd.DataFrame({"y": [SIAGA_THRESHOLD], "label": [f"{SIAGA_LABEL} Threshold ({SIAGA_THRESHOLD}%)"]})
         ).mark_text(align="left", dx=4, dy=-8, color="#ef4444", fontWeight="bold", fontSize=11).encode(
             y="y:Q", text="label:N"
         )
@@ -1013,21 +1014,21 @@ if menu == "Dashboard":
         st.altair_chart(nongsa_chart, use_container_width=True)
 
 # ---------------------------------------------------------------------------
-# Halaman: Alerts
+# Page: Alerts
 # ---------------------------------------------------------------------------
 elif menu == "Alerts":
     col_start, col_end = st.columns(2)
     with col_start:
-        start_date = st.date_input("Start Date", alerts_df["tanggal"].min())
+        start_date = st.date_input("Start Date", alerts_df["date"].min())
     with col_end:
-        end_date = st.date_input("End Date", alerts_df["tanggal"].max())
+        end_date = st.date_input("End Date", alerts_df["date"].max())
 
     date_range_alerts = alerts_df[
-        (alerts_df["tanggal"] >= pd.to_datetime(start_date))
-        & (alerts_df["tanggal"] <= pd.to_datetime(end_date))
+        (alerts_df["date"] >= pd.to_datetime(start_date))
+        & (alerts_df["date"] <= pd.to_datetime(end_date))
     ]
     filtered_alerts = date_range_alerts[
-        ~date_range_alerts["tanggal"].dt.strftime("%Y-%m-%d").isin(st.session_state.alerts_dismissed.keys())
+        ~date_range_alerts["date"].dt.strftime("%Y-%m-%d").isin(st.session_state.alerts_dismissed.keys())
     ]
 
     st.markdown('<h3 style="margin: 0 0 8px; color: #0f172a;">Current Alerts</h3>', unsafe_allow_html=True)
@@ -1036,10 +1037,10 @@ elif menu == "Alerts":
         st.session_state.alerts_checked[key] = not st.session_state.alerts_checked.get(key, False)
 
     if filtered_alerts.empty:
-        st.info("Tidak ada alert pada rentang tanggal yang dipilih.")
+        st.info("No alerts in the selected date range.")
     else:
         for idx, (_, row) in enumerate(filtered_alerts.iterrows()):
-            alert_key = row["tanggal"].strftime("%Y-%m-%d")
+            alert_key = row["date"].strftime("%Y-%m-%d")
             is_checked = st.session_state.alerts_checked.get(alert_key, False)
             level = row["level"]
             status_label = "CHECKED" if is_checked else level.upper()
@@ -1051,15 +1052,15 @@ elif menu == "Alerts":
                 st.markdown(
                     f"""
                     <div class="{card_class}">
-                        <div class="alert-date">{row['tanggal'].strftime('%d %b %Y')}</div>
-                        <div class="alert-message">{row['pesan']}</div>
+                        <div class="alert-date">{row['date'].strftime('%d %b %Y')}</div>
+                        <div class="alert-message">{row['message']}</div>
                         <div class="alert-tag {tag_class}">{status_label}</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
             with col_checkbox:
-                st.checkbox("Tandai sudah diperiksa", value=is_checked, key=f"check_{alert_key}_{idx}",
+                st.checkbox("Mark as checked", value=is_checked, key=f"check_{alert_key}_{idx}",
                              on_change=toggle_alert, args=(alert_key,), label_visibility="collapsed")
 
     st.markdown('<div style="margin-top: 18px;">', unsafe_allow_html=True)
@@ -1067,36 +1068,36 @@ elif menu == "Alerts":
     with button_col1:
         if st.button("✓ Mark All as Checked", key="mark_all_alerts_checked", use_container_width=True):
             for _, row in filtered_alerts.iterrows():
-                st.session_state.alerts_checked[row["tanggal"].strftime("%Y-%m-%d")] = True
+                st.session_state.alerts_checked[row["date"].strftime("%Y-%m-%d")] = True
             st.rerun()
     with button_col2:
         if st.button("✗ Clear All", key="clear_all_alerts_checked", use_container_width=True):
             for _, row in date_range_alerts.iterrows():
-                st.session_state.alerts_dismissed[row["tanggal"].strftime("%Y-%m-%d")] = True
+                st.session_state.alerts_dismissed[row["date"].strftime("%Y-%m-%d")] = True
             st.rerun()
     with button_col3:
         if st.button("↻ Restore All", key="restore_all_alerts", use_container_width=True):
             for _, row in date_range_alerts.iterrows():
-                st.session_state.alerts_dismissed.pop(row["tanggal"].strftime("%Y-%m-%d"), None)
+                st.session_state.alerts_dismissed.pop(row["date"].strftime("%Y-%m-%d"), None)
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
-# Halaman: Summary
+# Page: Summary
 # ---------------------------------------------------------------------------
 elif menu == "Summary":
     st.markdown(
         f"""
         <div class="summary-grid">
             <div class="summary-card blue">
-                <div class="summary-label">Proyeksi Hari ke {SIAGA_LABEL}</div>
+                <div class="summary-label">Projected Days to {SIAGA_LABEL}</div>
                 <div class="summary-value">{SIAGA_ETA_DAYS}</div>
-                <div class="summary-meta">hari ({SIAGA_ETA_LABEL}) — Sei Nongsa</div>
+                <div class="summary-meta">days ({SIAGA_ETA_LABEL}) — Sei Nongsa</div>
             </div>
             <div class="summary-card green">
                 <div class="summary-label">Reservoir Efficiency Score</div>
                 <div class="summary-value">{KOTA_LEVEL:.0f}</div>
-                <div class="summary-meta">out of 100 (Kota, weighted 7 waduk)</div>
+                <div class="summary-meta">out of 100 (City, weighted 7 reservoirs)</div>
             </div>
 
         </div>
@@ -1104,23 +1105,23 @@ elif menu == "Summary":
         unsafe_allow_html=True,
     )
 
-    st.markdown('<h3 style="margin: 1.5rem 0 0.75rem; color: #0f172a; font-size: 1.2rem;">Tren Reservoir Kota & Sei Nongsa</h3>', unsafe_allow_html=True)
+    st.markdown('<h3 style="margin: 1.5rem 0 0.75rem; color: #0f172a; font-size: 1.2rem;">City Reservoir & Sei Nongsa Trend</h3>', unsafe_allow_html=True)
     with st.container(key="summary_chart_card"):
         combined_df = pd.concat([
-            kota_df.assign(Reservoir="Kota"),
+            kota_df.assign(Reservoir="City"),
             nongsa_df.assign(Reservoir="Nongsa"),
         ], ignore_index=True)
         summary_chart = alt.Chart(combined_df).mark_line(strokeWidth=2.5).encode(
-            x=alt.X("Tanggal:T", title=None),
-            y=alt.Y("Level (%):Q", title="Level Reservoir (%)"),
+            x=alt.X("Date:T", title=None),
+            y=alt.Y("Level (%):Q", title="Reservoir Level (%)"),
             color=alt.Color(
                 "Reservoir:N", title=None,
-                scale=alt.Scale(domain=["Kota", "Nongsa"], range=["#1ca8d8", "#f59e0b"]),
+                scale=alt.Scale(domain=["City", "Nongsa"], range=["#1ca8d8", "#f59e0b"]),
                 legend=alt.Legend(orient="top"),
             ),
             strokeDash=alt.StrokeDash(
-                "Tipe:N",
-                scale=alt.Scale(domain=["Historis", "Forecast"], range=[[1, 0], [6, 4]]),
+                "Type:N",
+                scale=alt.Scale(domain=["Historical", "Forecast"], range=[[1, 0], [6, 4]]),
                 legend=None,
             ),
         ).properties(height=340)
@@ -1128,43 +1129,43 @@ elif menu == "Summary":
 
     st.markdown('<div style="margin-top: 18px;">', unsafe_allow_html=True)
     st.download_button(
-        label="Download Data Reservoir (CSV)",
+        label="Download Reservoir Data (CSV)",
         data=reservoir_df.to_csv(index=False),
         file_name="reservoir_data_export.csv",
         mime="text/csv",
     )
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # --- Simulasi Data Center (interaktif) ---
+    # --- Data Center Simulation (interactive) ---
     with st.container(key="dc_sim_card"):
         title_col, hint_col = st.columns([3, 2])
         with title_col:
-            st.markdown('<div class="dc-sim-title">Simulasi Data Center</div>', unsafe_allow_html=True)
+            st.markdown('<div class="dc-sim-title">Data Center Simulation</div>', unsafe_allow_html=True)
         with hint_col:
             st.markdown(
-                '<div class="dc-sim-hint" style="text-align:right;">Geser → angka &amp; trade-off ikut berubah</div>',
+                '<div class="dc-sim-hint" style="text-align:right;">Slide → numbers &amp; trade-offs update accordingly</div>',
                 unsafe_allow_html=True,
             )
 
         slider_col, metrics_col = st.columns([1, 2.2])
         with slider_col:
-            sim_servers = st.slider("Server", min_value=1000, max_value=20000,
+            sim_servers = st.slider("Servers", min_value=1000, max_value=20000,
                                      value=int(DC_BASELINE["servers"]), step=500)
             sim_wue = st.slider("WUE (L/kWh)", min_value=0.5, max_value=5.0,
                                  value=float(DC_BASELINE["wue_L_per_kWh"]), step=0.1)
-            sim_recycle = st.slider("Daur ulang (%)", min_value=0, max_value=100,
+            sim_recycle = st.slider("Recycling (%)", min_value=0, max_value=100,
                                      value=int(DC_BASELINE["recycle_rate_pct"]), step=5)
 
-        # Perhitungan ulang otomatis — Streamlit rerun setiap slider digeser.
+        # Automatic recalculation — Streamlit reruns every time a slider moves.
         power_per_server_kW = DC_BASELINE["power_per_server_kW"]
         energi_recycle_per_m3 = DC_BASELINE["energi_recycle_kWh_per_m3"]
 
-        sim_energi_server = sim_servers * power_per_server_kW * 24          # kWh/hari
-        sim_gross = sim_energi_server * sim_wue / 1000                      # m3/hari
-        sim_recycled_volume = sim_gross * (sim_recycle / 100)               # m3/hari
-        sim_dari_reservoir = sim_gross - sim_recycled_volume                # m3/hari
-        sim_energi_recycle = sim_recycled_volume * energi_recycle_per_m3    # kWh/hari
-        sim_total_energi = sim_energi_server + sim_energi_recycle           # kWh/hari
+        sim_energi_server = sim_servers * power_per_server_kW * 24          # kWh/day
+        sim_gross = sim_energi_server * sim_wue / 1000                      # m3/day
+        sim_recycled_volume = sim_gross * (sim_recycle / 100)               # m3/day
+        sim_dari_reservoir = sim_gross - sim_recycled_volume                # m3/day
+        sim_energi_recycle = sim_recycled_volume * energi_recycle_per_m3    # kWh/day
+        sim_total_energi = sim_energi_server + sim_energi_recycle           # kWh/day
         recycle_energy_share = (sim_energi_recycle / sim_total_energi * 100) if sim_total_energi else 0
         nongsa_impact_pct = (
             sim_dari_reservoir / DC_BASELINE["nongsa_volume_m3"] * 100
@@ -1174,10 +1175,10 @@ elif menu == "Summary":
         with metrics_col:
             stat_cols = st.columns(4)
             for col, label, value, unit in [
-                (stat_cols[0], "Gross", f"{sim_gross:,.1f}", "m³/hari"),
-                (stat_cols[1], "Dari Reservoir", f"{sim_dari_reservoir:,.1f}", "m³/hari"),
-                (stat_cols[2], "Energi Server", f"{sim_energi_server:,.0f}", "kWh/hari"),
-                (stat_cols[3], "Energi Recycle", f"{sim_energi_recycle:,.0f}", "kWh/hari"),
+                (stat_cols[0], "Gross", f"{sim_gross:,.1f}", "m³/day"),
+                (stat_cols[1], "From Reservoir", f"{sim_dari_reservoir:,.1f}", "m³/day"),
+                (stat_cols[2], "Server Energy", f"{sim_energi_server:,.0f}", "kWh/day"),
+                (stat_cols[3], "Recycle Energy", f"{sim_energi_recycle:,.0f}", "kWh/day"),
             ]:
                 with col:
                     st.markdown(
@@ -1193,23 +1194,24 @@ elif menu == "Summary":
         st.markdown(
             f"""
             <div class="energy-bar-row">
-                <span>Total energi: {sim_total_energi:,.0f} kWh/hari</span>
-                <span>Recycle = {recycle_energy_share:.1f}% dari energi DC</span>
+                <span>Total energy: {sim_total_energi:,.0f} kWh/day</span>
+                <span>Recycle = {recycle_energy_share:.1f}% of DC energy</span>
             </div>
             <div class="energy-bar-wrap">
                 <div class="energy-bar-fill" style="width: {min(recycle_energy_share, 100):.2f}%;"></div>
             </div>
             <div class="dc-impact-caption">
-                Dampak Lingkungan — vs baseline {sim_servers:,} server / WUE {sim_wue:.1f} / recycle {sim_recycle}%
+                Environmental Impact — vs baseline {sim_servers:,} servers / WUE {sim_wue:.1f} / recycle {sim_recycle}%
             </div>
             """,
             unsafe_allow_html=True,
         )
 
         def render_impact_metric(container, session_key, value, value_fmt, label, higher_is_better):
-            """Render satu angka Dampak Lingkungan + badge panah (naik/turun)
-            dan efek kedip singkat, dibandingkan dengan nilai render sebelumnya
-            (disimpan di session_state) — jadi terlihat jelas saat slider diubah."""
+            """Render one Environmental Impact number + arrow badge (up/down)
+            and a brief flash effect, compared against the previous render's
+            value (stored in session_state) — so changes are clearly visible
+            when a slider moves."""
             prev_value = st.session_state.get(session_key)
             delta = None if prev_value is None else value - prev_value
             st.session_state[session_key] = value
@@ -1234,36 +1236,36 @@ elif menu == "Summary":
 
         impact_cols = st.columns(3)
         render_impact_metric(impact_cols[0], "prev_dari_reservoir", sim_dari_reservoir,
-                              lambda v: f"{v:,.1f}", "m³/hari diambil dari waduk", higher_is_better=False)
+                              lambda v: f"{v:,.1f}", "m³/day drawn from the reservoir", higher_is_better=False)
         render_impact_metric(impact_cols[1], "prev_recycled_volume", sim_recycled_volume,
-                              lambda v: f"{v:,.1f}", "m³/hari diselamatkan (recycle)", higher_is_better=True)
+                              lambda v: f"{v:,.1f}", "m³/day saved (recycled)", higher_is_better=True)
         render_impact_metric(impact_cols[2], "prev_nongsa_impact_pct", nongsa_impact_pct,
-                              lambda v: f"{v:.3f}%", "dari volume Nongsa/hari", higher_is_better=False)
+                              lambda v: f"{v:.3f}%", "of Nongsa volume/day", higher_is_better=False)
 
-    # --- Aksi ---
-    dc_risk_label = "belum berisiko" if nongsa_impact_pct < 0.05 else "perlu diwaspadai"
+    # --- Actions ---
+    dc_risk_label = "not yet at risk" if nongsa_impact_pct < 0.05 else "needs monitoring"
     st.markdown(
         f"""
         <div style="margin-top: 18px;">
-            <div class="dc-sim-title" style="margin-bottom: 10px;">Aksi</div>
+            <div class="dc-sim-title" style="margin-bottom: 10px;">Actions</div>
             <div class="action-chip-row">
-                <span class="action-chip">Kota: tidak perlu tindakan darurat</span>
-                <span class="action-chip">Nongsa: pasang alarm di {SIAGA_THRESHOLD + 5}%</span>
-                <span class="action-chip">DC saat ini: {dc_risk_label}</span>
-                <span class="action-chip">Naikkan recycle → hemat air, tambah listrik</span>
+                <span class="action-chip">City: no emergency action needed</span>
+                <span class="action-chip">Nongsa: set an alarm at {SIAGA_THRESHOLD + 5}%</span>
+                <span class="action-chip">DC currently: {dc_risk_label}</span>
+                <span class="action-chip">Increase recycling → saves water, uses more electricity</span>
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # --- Sumber & keterbatasan data ---
+    # --- Data sources & limitations ---
     def format_period(period_str):
-        months_id = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
+        months_en = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
         try:
             start_str, end_str = period_str.split(" to ")
             start, end = pd.Timestamp(start_str), pd.Timestamp(end_str)
-            return f"{months_id[start.month - 1]} {start.year}–{months_id[end.month - 1]} {end.year}"
+            return f"{months_en[start.month - 1]} {start.year}–{months_en[end.month - 1]} {end.year}"
         except (ValueError, IndexError):
             return period_str
 
@@ -1271,13 +1273,13 @@ elif menu == "Summary":
     st.markdown(
         f"""
         <div class="data-notes-card">
-            <div class="data-notes-title">▾ Sumber &amp; keterbatasan data</div>
-            <div class="data-notes-row"><b>Data riil:</b> {format_period(notes.get('real_period', '-'))},
-                sumber {notes.get('real_source', '-')}.</div>
-            <div class="data-notes-row"><b>Data simulasi:</b> {format_period(notes.get('simulated_period', '-'))},
-                {notes.get('simulated_method', '-')} (bukan observasi aktual).</div>
-            <div class="data-notes-row"><b>Koefisien DC:</b> WUE, energi recycle, dan recovery rate memakai
-                asumsi benchmark industri, bukan hasil pengukuran DC Batam riil.</div>
+            <div class="data-notes-title">▾ Data sources &amp; limitations</div>
+            <div class="data-notes-row"><b>Real data:</b> {format_period(notes.get('real_period', '-'))},
+                source {notes.get('real_source', '-')}.</div>
+            <div class="data-notes-row"><b>Simulated data:</b> {format_period(notes.get('simulated_period', '-'))},
+                {notes.get('simulated_method', '-')} (not actual observations).</div>
+            <div class="data-notes-row"><b>DC coefficients:</b> WUE, recycle energy, and recovery rate use
+                industry benchmark assumptions, not measurements from a real Batam DC.</div>
         </div>
         """,
         unsafe_allow_html=True,

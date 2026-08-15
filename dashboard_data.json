@@ -2,16 +2,16 @@
   "last_updated": "2026-08-14",
   "status": {
     "kota_pct": 91.98,
-    "kota_status": "Aman",
+    "kota_status": "Safe",
     "nongsa_pct": 67.4,
     "nongsa_trend_8mo_poin": -33.5
   },
   "early_warning": {
     "target_pct": 35,
-    "target_label": "Siaga",
+    "target_label": "Alert",
     "eta_days": 486,
-    "eta_label": "~16 bulan",
-    "method": "linear extrapolation dari slope forecast 90 hari"
+    "eta_label": "~16 months",
+    "method": "linear extrapolation from 90-day forecast slope"
   },
   "dc_baseline": {
     "servers": 8000,
@@ -30,7 +30,7 @@
   "data_notes": {
     "real_period": "2025-12-15 to 2026-08-14",
     "simulated_period": "2024-01-01 to 2025-12-14",
-    "real_source": "BP Batam - Informasi TMA harian",
+    "real_source": "BP Batam - Daily Water Level Information",
     "simulated_method": "Seasonal bootstrap with mean-reversion"
   }
 }
