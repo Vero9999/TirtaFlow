@@ -1,0 +1,55 @@
+{
+  "generated_at": "2026-08-15T09:00:00",
+  "alerts": [
+    {
+      "date": "2026-08-06",
+      "alert_level": "WATCH",
+      "reservoir_pct": 43.1
+    },
+    {
+      "date": "2026-08-07",
+      "alert_level": "WATCH",
+      "reservoir_pct": 42.3
+    },
+    {
+      "date": "2026-08-08",
+      "alert_level": "WATCH",
+      "reservoir_pct": 41.6
+    },
+    {
+      "date": "2026-08-09",
+      "alert_level": "WATCH",
+      "reservoir_pct": 41.0
+    },
+    {
+      "date": "2026-08-10",
+      "alert_level": "WATCH",
+      "reservoir_pct": 40.2
+    },
+    {
+      "date": "2026-08-11",
+      "alert_level": "WARNING",
+      "reservoir_pct": 39.7
+    },
+    {
+      "date": "2026-08-12",
+      "alert_level": "WARNING",
+      "reservoir_pct": 39.0
+    },
+    {
+      "date": "2026-08-13",
+      "alert_level": "WARNING",
+      "reservoir_pct": 38.4
+    },
+    {
+      "date": "2026-08-14",
+      "alert_level": "WARNING",
+      "reservoir_pct": 37.3
+    },
+    {
+      "date": "2026-08-15",
+      "alert_level": "WARNING",
+      "reservoir_pct": 36.0
+    }
+  ]
+}

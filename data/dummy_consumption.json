@@ -1,0 +1,215 @@
+{
+  "generated_at": "2026-08-15T09:00:00",
+  "data": [
+    {
+      "date": "2026-07-17",
+      "water_consumption_m3": 4935.7,
+      "electricity_kwh": 19954.8,
+      "reservoir_level_pct": 59.0,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-07-18",
+      "water_consumption_m3": 4823.2,
+      "electricity_kwh": 20215.5,
+      "reservoir_level_pct": 58.2,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-07-19",
+      "water_consumption_m3": 5036.2,
+      "electricity_kwh": 19604.7,
+      "reservoir_level_pct": 57.5,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-07-20",
+      "water_consumption_m3": 5390.7,
+      "electricity_kwh": 20905.6,
+      "reservoir_level_pct": 56.7,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-07-21",
+      "water_consumption_m3": 5007.2,
+      "electricity_kwh": 19379.2,
+      "reservoir_level_pct": 55.7,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-07-22",
+      "water_consumption_m3": 4860.9,
+      "electricity_kwh": 19780.6,
+      "reservoir_level_pct": 55.2,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-07-23",
+      "water_consumption_m3": 5083.2,
+      "electricity_kwh": 20738.5,
+      "reservoir_level_pct": 54.4,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-07-24",
+      "water_consumption_m3": 5202.4,
+      "electricity_kwh": 21183.0,
+      "reservoir_level_pct": 53.9,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-07-25",
+      "water_consumption_m3": 4802.5,
+      "electricity_kwh": 19909.6,
+      "reservoir_level_pct": 53.1,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-07-26",
+      "water_consumption_m3": 5072.9,
+      "electricity_kwh": 20026.7,
+      "reservoir_level_pct": 51.9,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-07-27",
+      "water_consumption_m3": 5301.7,
+      "electricity_kwh": 20773.7,
+      "reservoir_level_pct": 51.2,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-07-28",
+      "water_consumption_m3": 5177.6,
+      "electricity_kwh": 20647.5,
+      "reservoir_level_pct": 49.7,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-07-29",
+      "water_consumption_m3": 5213.2,
+      "electricity_kwh": 21406.2,
+      "reservoir_level_pct": 49.3,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-07-30",
+      "water_consumption_m3": 5327.9,
+      "electricity_kwh": 20408.7,
+      "reservoir_level_pct": 48.1,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-07-31",
+      "water_consumption_m3": 5365.9,
+      "electricity_kwh": 19970.9,
+      "reservoir_level_pct": 47.1,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-08-01",
+      "water_consumption_m3": 5469.5,
+      "electricity_kwh": 21479.3,
+      "reservoir_level_pct": 46.5,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-08-02",
+      "water_consumption_m3": 5385.1,
+      "electricity_kwh": 20533.3,
+      "reservoir_level_pct": 46.0,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-08-03",
+      "water_consumption_m3": 5370.5,
+      "electricity_kwh": 20751.0,
+      "reservoir_level_pct": 45.1,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-08-04",
+      "water_consumption_m3": 5212.9,
+      "electricity_kwh": 21024.9,
+      "reservoir_level_pct": 44.5,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-08-05",
+      "water_consumption_m3": 5335.2,
+      "electricity_kwh": 20531.6,
+      "reservoir_level_pct": 43.7,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-08-06",
+      "water_consumption_m3": 5515.7,
+      "electricity_kwh": 20692.9,
+      "reservoir_level_pct": 43.1,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-08-07",
+      "water_consumption_m3": 5136.1,
+      "electricity_kwh": 19854.0,
+      "reservoir_level_pct": 42.3,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-08-08",
+      "water_consumption_m3": 5398.5,
+      "electricity_kwh": 20932.8,
+      "reservoir_level_pct": 41.6,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-08-09",
+      "water_consumption_m3": 5480.6,
+      "electricity_kwh": 21369.5,
+      "reservoir_level_pct": 41.0,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-08-10",
+      "water_consumption_m3": 5104.6,
+      "electricity_kwh": 22034.2,
+      "reservoir_level_pct": 40.2,
+      "alert_level": "WATCH"
+    },
+    {
+      "date": "2026-08-11",
+      "water_consumption_m3": 5536.0,
+      "electricity_kwh": 21603.9,
+      "reservoir_level_pct": 39.7,
+      "alert_level": "WARNING"
+    },
+    {
+      "date": "2026-08-12",
+      "water_consumption_m3": 5263.8,
+      "electricity_kwh": 21000.7,
+      "reservoir_level_pct": 39.0,
+      "alert_level": "WARNING"
+    },
+    {
+      "date": "2026-08-13",
+      "water_consumption_m3": 5492.4,
+      "electricity_kwh": 21379.4,
+      "reservoir_level_pct": 38.4,
+      "alert_level": "WARNING"
+    },
+    {
+      "date": "2026-08-14",
+      "water_consumption_m3": 5508.2,
+      "electricity_kwh": 22152.5,
+      "reservoir_level_pct": 37.3,
+      "alert_level": "WARNING"
+    },
+    {
+      "date": "2026-08-15",
+      "water_consumption_m3": 5405.4,
+      "electricity_kwh": 20321.2,
+      "reservoir_level_pct": 36.0,
+      "alert_level": "WARNING"
+    }
+  ]
+}
